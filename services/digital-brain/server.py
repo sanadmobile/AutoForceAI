@@ -77,7 +77,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={"detail": exc.errors()},
     )
 
-from routers import solution_router, ppt_template_router, product_router
+from routers import solution_router, ppt_template_router,
+# from routers import product_router # Excluded
 # from routers import service_chat_router # Excluded for now
 
 # Include Routers
@@ -95,8 +96,8 @@ app.include_router(platform_router.router)
 app.include_router(brain_router.router)
 app.include_router(export_router.router)
 # app.include_router(service_chat_router.router) # Excluded
+# app.include_router(product_router.router) # Excluded
 app.include_router(solution_router.router)
-app.include_router(product_router.router)
 app.include_router(admin_router.router)
 
 # Lightweight health check

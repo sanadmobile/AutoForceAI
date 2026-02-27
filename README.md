@@ -193,7 +193,7 @@ AutoForceAI is built on the shoulders of giants. Special thanks to these amazing
 
 ## 📞 Contact & Communication
 
-- **Commercial Cooperation / Custom Development**: Please contact author email `87616340@qq.com`
+- **Commercial Cooperation / Custom Development**: Please contact author email `andylin@sdosoft.com`
 - **Issue Feedback**: Please prefer [GitHub Issues](../../issues) for archiving and helping others.
 - **Technical Group**: Scan the QR code to join WeChat group (Please email if expired).
 
