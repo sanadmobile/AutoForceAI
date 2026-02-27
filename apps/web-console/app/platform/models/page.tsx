@@ -1,0 +1,569 @@
+"use client";
+import React, { useState, useEffect } from 'react';
+import { 
+  Search, 
+  Filter, 
+  Plus, 
+  Settings, 
+  Trash2, 
+  CheckCircle2, 
+  X
+} from 'lucide-react';
+import api from '../../../lib/api';
+import { useToast } from '../../../contexts/ToastContext';
+
+interface Model {
+  id: number;
+  name: string;
+  display_name: string;
+  provider_name?: string;
+  provider_id?: number;
+  type: string;
+  context_window: string;
+  is_active: boolean;
+  supports_geo: boolean;
+  supports_chat: boolean;
+  api_key?: string;
+  base_url?: string;
+  is_default: boolean;
+  is_kb_search_default?: boolean;
+}
+
+interface Provider {
+    id: number;
+    name: string;
+}
+
+const PRESETS: any = {
+    'openai': 'https://api.openai.com/v1',
+    'azure': 'https://{resource}.openai.azure.com',
+    'zhipu': 'https://open.bigmodel.cn/api/paas/v4',
+    'aliyun': 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+};
+
+const MODEL_PRESETS = [
+    { label: 'OpenAI GPT-4o', value: 'gpt-4o', base_url: 'https://api.openai.com/v1', context: '128k' },
+    { label: 'OpenAI GPT-4 Turbo', value: 'gpt-4-turbo', base_url: 'https://api.openai.com/v1', context: '128k' },
+    { label: 'Aliyun Qwen-Max', value: 'qwen-max', base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', context: '32k' },
+    { label: 'Aliyun Qwen-Turbo', value: 'qwen-turbo', base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', context: '32k' },
+    { label: 'Aliyun Qwen-Plus', value: 'qwen-plus', base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', context: '128k' },
+    { label: 'Zhipu GLM-4', value: 'glm-4', base_url: 'https://open.bigmodel.cn/api/paas/v4', context: '128k' },
+    { label: 'Zhipu GLM-4-Flash', value: 'glm-4-flash', base_url: 'https://open.bigmodel.cn/api/paas/v4', context: '128k' },
+    { label: 'DeepSeek V3', value: 'deepseek-chat', base_url: 'https://api.deepseek.com', context: '64k' },
+    { label: 'DeepSeek R1', value: 'deepseek-reasoner', base_url: 'https://api.deepseek.com', context: '64k' },
+    { label: 'SiliconFlow DeepSeek R1', value: 'deepseek-ai/DeepSeek-R1', base_url: 'https://api.siliconflow.cn/v1', context: '64k' },
+    { label: 'SiliconFlow DeepSeek V3', value: 'deepseek-ai/DeepSeek-V3', base_url: 'https://api.siliconflow.cn/v1', context: '64k' },
+    { label: 'Volcengine Doubao Pro 32k', value: 'doubao-pro-32k', base_url: 'https://ark.cn-beijing.volces.com/api/v3', context: '32k' },
+    { label: 'Volcengine Doubao Lite 32k', value: 'doubao-lite-32k', base_url: 'https://ark.cn-beijing.volces.com/api/v3', context: '32k' },
+    { label: 'Volcengine Doubao Pro 128k', value: 'doubao-pro-128k', base_url: 'https://ark.cn-beijing.volces.com/api/v3', context: '128k' },
+    { label: 'Volcengine Doubao 1.5 Pro 32k', value: 'doubao-1-5-pro-32k-250115', base_url: 'https://ark.cn-beijing.volces.com/api/v3', context: '32k' },
+    { label: 'Custom / Other', value: 'custom', base_url: '', context: '' }
+];
+
+export default function ModelsPage() {
+  const [models, setModels] = useState<Model[]>([]);
+  const { showToast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingModel, setEditingModel] = useState<Model | null>(null);
+  const [providers, setProviders] = useState<Provider[]>([]);
+
+  // Fetch Models
+  useEffect(() => {
+    fetchModels();
+  }, []);
+
+  const fetchModels = async () => {
+        setLoading(true);
+        try {
+          const res = await api.get('/api/v1/platform/models');
+          setModels(res.data);
+        } catch (err) {
+          console.error(err);
+          showToast("加载模型列表失败", "error");
+        } finally {
+          setLoading(false);
+        }
+      };
+    
+      const fetchProviders = async () => {
+          try {
+              const res = await api.get('/api/v1/platform/providers');
+              setProviders(res.data);
+          } catch (err) {
+              console.error(err);
+          }
+      }
+
+      // Add state for delete confirmation
+      const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+
+      const confirmDelete = async () => {
+        if (!deleteTargetId) return;
+        try {
+          await api.delete(`/api/v1/platform/models/${deleteTargetId}`);
+          showToast("模型已删除", "success");
+          fetchModels();
+        } catch (err) {
+          showToast("操作失败", "error");
+        } finally {
+          setDeleteTargetId(null);
+        }
+      }
+    
+      const openCreateModal = () => {
+          setEditingModel(null);
+          // fetchProviders(); // Providers hidden
+          setShowModal(true);
+      }
+    
+      const openEditModal = (model: Model) => {
+          setEditingModel(model);
+          // fetchProviders();
+          setShowModal(true);
+      }
+    
+      return (
+        <div className="h-full flex flex-col p-6 text-slate-100">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                     <h1 className="text-2xl font-bold text-white">模型纳管 (Model Registry)</h1>
+                     <p className="text-sm text-slate-400">管理与配置您的 AI 模型资产与路由。</p>
+                </div>
+                <button 
+                    onClick={openCreateModal}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                    <Plus size={16} /> 接入新模型
+                </button>
+            </div>
+    
+            {/* Filters */}
+            <div className="flex items-center gap-4 mb-6">
+                <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                    <input 
+                        type="text" 
+                        placeholder="搜索模型..." 
+                        className="w-full pl-10 pr-4 py-2 bg-black/20 border border-white/10 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50"
+                    />
+                </div>
+                <div className="flex items-center gap-2">
+                     <FilterButton label="全部类型" active />
+                     <FilterButton label="仅活跃" />
+                </div>
+            </div>
+    
+            {/* Table - Added min-h-0 to allow proper flex scrolling */}
+            <div className="glass-panel min-h-0 flex-1 flex flex-col overflow-hidden border border-white/5 bg-[#1C1F26] rounded-xl">
+                {loading ? (
+                     <div className="p-12 text-center text-slate-500">正在加载模型配置...</div>
+                ) : (
+                    <div className="flex-1 overflow-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-[#1C1F26] text-slate-400 font-medium border-b border-white/5 sticky top-0 z-10">
+                                <tr>
+                                    <th className="p-4 pl-6">显示名称</th>
+                                    <th className="p-4">类型</th>
+                                    <th className="p-4">Context</th>
+                                    <th className="p-4">GEO搜索</th>
+                                    <th className="p-4">状态</th>
+                                    <th className="p-4 text-right pr-6">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {models.map((model) => (
+                                    <tr key={model.id} className="hover:bg-white/[0.02] transition-colors group">
+                                        <td className="p-4 pl-6 font-medium text-white">
+                                            <div className="flex items-center gap-2">
+                                                {model.display_name}
+                                                {model.is_default && (
+                                                    <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] border border-indigo-500/30">
+                                                        默认
+                                                    </span>
+                                                )}
+                                                {model.is_kb_search_default && (
+                                                    <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] border border-amber-500/30">
+                                                        KB默认
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="p-4">
+                                            <span className="px-2 py-0.5 rounded border border-white/10 text-xs bg-white/5 font-mono text-slate-300">{model.type}</span>
+                                        </td>
+                                        <td className="p-4 text-slate-400 font-mono">{model.context_window}</td>
+                                        <td className="p-4">
+                                            {model.supports_geo ? (
+                                                <span className="text-emerald-400 text-xs flex items-center gap-1"><CheckCircle2 size={12}/> 支持</span>
+                                            ) : (
+                                                <span className="text-slate-600 text-xs">-</span>
+                                            )}
+                                        </td>
+                                        <td className="p-4">
+                                            <StatusBadge active={model.is_active !== false} />
+                                        </td>
+                                        <td className="p-4 text-right pr-6">
+                                            <div className="flex items-center justify-end gap-2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button 
+                                                    onClick={() => openEditModal(model)}
+                                                    className="p-1.5 hover:bg-white/10 rounded text-slate-300 hover:text-white transition-colors" title="配置"
+                                                >
+                                                    <Settings size={14} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => setDeleteTargetId(model.id)}
+                                                    className="p-1.5 hover:bg-red-500/10 hover:text-red-400 rounded text-slate-300 transition-colors" title="下线"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+    
+            {showModal && (
+                <ModelModal 
+                    model={editingModel} 
+                    providers={providers}
+                    onClose={() => setShowModal(false)}
+                    onSuccess={() => {
+                        setShowModal(false);
+                        fetchModels();
+                    }}
+                />
+            )}
+
+            {/* Custom Delete Confirmation Modal */}
+            {deleteTargetId && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-[#1C1F26] border border-white/10 rounded-xl p-6 w-full max-w-sm shadow-2xl">
+                        <h3 className="text-lg font-bold text-white mb-2">确认删除</h3>
+                        <p className="text-sm text-slate-400 mb-6">确定要删除此模型配置吗？此操作不可恢复。</p>
+                        <div className="flex justify-end gap-3">
+                            <button 
+                                onClick={() => setDeleteTargetId(null)}
+                                className="px-4 py-2 hover:bg-white/5 text-slate-300 rounded-lg text-sm transition-colors"
+                            >
+                                取消
+                            </button>
+                            <button 
+                                onClick={confirmDelete}
+                                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition-colors"
+                            >
+                                确认删除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+      );
+    }
+function ModelModal({ model, providers, onClose, onSuccess }: { model: Model | null, providers: Provider[], onClose: () => void, onSuccess: () => void }) {
+    const { showToast } = useToast();
+    const [loading, setLoading] = useState(false);
+    // Auto-detect provider or use first available (hidden from user)
+    const defaultProviderId = providers.length > 0 ? providers[0].id : undefined;
+
+    const [formData, setFormData] = useState({
+        provider_id: model?.provider_id || defaultProviderId, 
+        name: model?.name || '',
+        display_name: model?.display_name || '',
+        type: model?.type || 'LLM',
+        context_window: model?.context_window || '4k',
+        supports_geo: model?.supports_geo || false,
+        supports_chat: model?.supports_chat ?? true,
+        // Set default active status for NEW models to false (per user request: "default is unchecked")
+        // But keep existing model's status if editing
+        is_active: model ? (model.is_active ?? true) : false,
+        api_key: model?.api_key || '',
+        base_url: model?.base_url || '',
+        is_default: model?.is_default || false,
+        is_kb_search_default: model?.is_kb_search_default || false
+    });
+
+    const isEdit = !!model;
+
+    const handlePresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value;
+        const preset = MODEL_PRESETS.find(p => p.value === val);
+        if (preset) {
+            if (val === 'custom') {
+                 // Don't fully reset, just allow editing name
+                 setFormData(prev => ({ ...prev, name: '', display_name: '' }));
+            } else {
+                 setFormData(prev => ({
+                     ...prev,
+                     name: preset.value,
+                     display_name: preset.label,
+                     base_url: preset.base_url,
+                     context_window: preset.context,
+                     // Reset API key or keep? Usually API key is unique per provider, but if switching preset within same provider, might want to keep. 
+                     // Safe to keep existing input if user already typed it.
+                 }));
+            }
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        
+        let submitData = { ...formData };
+        
+        // Validation for Custom
+        if (!submitData.display_name) {
+            showToast("请填写模型名称", "error");
+            setLoading(false);
+            return;
+        }
+
+        // Auto-generate ID if not present (logic: slugify display name)
+        if (!submitData.name && submitData.display_name) {
+             submitData.name = submitData.display_name
+                .toLowerCase()
+                .trim()
+                .replace(/[\s_]+/g, '-')
+                .replace(/[^a-z0-9-]/g, '');
+        }
+
+        try {
+            if (isEdit && model) {
+                await api.put(`/api/v1/platform/models/${model.id}`, submitData);
+            } else {
+                await api.post('/api/v1/platform/models', submitData);
+            }
+            showToast(isEdit ? "更新成功" : "创建成功", "success");
+            onSuccess();
+        } catch (err) {
+            console.error(err);
+            showToast("操作失败", "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto py-10">
+            <div className="bg-[#1C1F26] border border-white/10 rounded-xl w-full max-w-3xl shadow-2xl my-auto">
+                <div className="flex justify-between items-center p-6 border-b border-white/10">
+                    <h2 className="text-xl font-bold text-white">
+                        {isEdit ? '编辑模型配置' : '接入新模型'}
+                    </h2>
+                    <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                
+                <form onSubmit={handleSubmit} className="p-6">
+                    {/* Hidden Provider Select - Auto Handled */}
+                    <input type="hidden" value={formData.provider_id} />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        {/* Left Column: Basic Info */}
+                        <div className="space-y-4">
+                            {!isEdit && (
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-slate-400">选择预设 (Preset)</label>
+                                    <div className="relative">
+                                        <select
+                                            onChange={handlePresetChange}
+                                            className="w-full bg-slate-950 border border-white/10 rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:border-indigo-500 outline-none appearance-none transition-colors hover:border-white/20"
+                                            defaultValue=""
+                                        >
+                                            <option value="" disabled>-- 请选择模型 (Please Select) --</option>
+                                            {MODEL_PRESETS.map(p => (
+                                                <option key={p.value} value={p.value}>{p.label}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                                            <Search size={14} />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-slate-400">
+                                    模型ID / Endpoint ID <span className="text-red-400">*</span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={formData.name}
+                                    onChange={e => setFormData({...formData, name: e.target.value})}
+                                    className="w-full bg-black/20 border border-white/10 rounded-lg p-2.5 text-sm text-slate-200 font-mono focus:border-indigo-500/50 outline-none transition-colors"
+                                    placeholder="e.g. gpt-4, ep-202406..."
+                                    required
+                                />
+                                <p className="text-[10px] text-slate-500 leading-tight">
+                                    OpenAI等标准协议填写模型名(如 gpt-4)；火山引擎等私有部署填写 Endpoint ID。
+                                </p>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-slate-400">
+                                    显示名称 (Display Name) <span className="text-red-400">*</span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={formData.display_name}
+                                    onChange={e => setFormData({...formData, display_name: e.target.value})}
+                                    className="w-full bg-black/20 border border-white/10 rounded-lg p-2.5 text-sm text-slate-200 focus:border-indigo-500/50 outline-none transition-colors"
+                                    placeholder="e.g. GPT-4 Turbo"
+                                    required
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-slate-400">上下文 (Context)</label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.context_window}
+                                        onChange={e => setFormData({...formData, context_window: e.target.value})}
+                                        className="w-full bg-black/20 border border-white/10 rounded-lg p-2.5 text-sm text-slate-200"
+                                        placeholder="e.g. 128k"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-slate-400">模型类型 (Type)</label>
+                                    <div className="relative">
+                                        <select
+                                            value={formData.type}
+                                            onChange={e => setFormData({...formData, type: e.target.value})}
+                                            className="w-full bg-slate-950 border border-white/10 rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:border-indigo-500 outline-none appearance-none hover:border-white/20"
+                                        >
+                                            <option value="LLM">LLM</option>
+                                            <option value="Embedding">Embedding</option>
+                                        </select>
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                                            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right Column: API & Config */}
+                        <div className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-slate-400">API 地址 (Base URL)</label>
+                                <input 
+                                    type="text" 
+                                    value={formData.base_url}
+                                    onChange={e => setFormData({...formData, base_url: e.target.value})}
+                                    className="w-full bg-black/20 border border-white/10 rounded-lg p-2.5 text-sm text-slate-200 font-mono focus:border-indigo-500/50 outline-none transition-colors"
+                                    placeholder="https://api.openai.com/v1"
+                                />
+                            </div>
+                            
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-slate-400">API Key</label>
+                                <textarea 
+                                    value={formData.api_key}
+                                    onChange={e => setFormData({...formData, api_key: e.target.value})}
+                                    className="w-full h-[120px] bg-black/20 border border-white/10 rounded-lg p-2.5 text-sm text-slate-200 font-mono focus:border-indigo-500/50 outline-none transition-colors resize-none"
+                                    placeholder="sk-..."
+                                />
+                            </div>
+
+                            <div className="bg-white/5 rounded-lg p-3 space-y-2">
+                                <label className="flex items-start gap-3 cursor-pointer p-1.5 rounded hover:bg-white/5 transition-colors border-b border-white/5 pb-2 mb-2">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.is_active}
+                                        onChange={e => setFormData({...formData, is_active: e.target.checked})}
+                                        className="w-4 h-4 mt-0.5 rounded border-white/10 bg-black/20 text-emerald-500 focus:ring-offset-0 focus:ring-0"
+                                    />
+                                    <div className="flex flex-col">
+                                        <span className="text-sm text-white">启用模型 (Enable Model)</span>
+                                        <span className="text-[10px] text-slate-500">禁用后将无法在聊天中使用</span>
+                                    </div>
+                                </label>
+
+                                <label className="flex items-center gap-3 cursor-pointer p-1.5 rounded hover:bg-white/5 transition-colors">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.supports_geo}
+                                        onChange={e => setFormData({...formData, supports_geo: e.target.checked})}
+                                        className="w-4 h-4 rounded border-white/10 bg-black/20 text-indigo-500 focus:ring-offset-0 focus:ring-0"
+                                    />
+                                    <span className="text-sm text-slate-300">支持 GEO 搜索 (Supports GEO)</span>
+                                </label>
+                                
+                                <label className="flex items-start gap-3 cursor-pointer p-1.5 rounded hover:bg-white/5 transition-colors">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.is_default}
+                                        onChange={e => setFormData({...formData, is_default: e.target.checked})}
+                                        className="w-4 h-4 mt-0.5 rounded border-white/10 bg-black/20 text-indigo-500 focus:ring-offset-0 focus:ring-0"
+                                    />
+                                    <div className="flex flex-col">
+                                        <span className="text-sm text-white">设为默认模型 (Default Model)</span>
+                                        <span className="text-[10px] text-slate-500">未指定模型时优先使用</span>
+                                    </div>
+                                </label>
+
+                                <label className="flex items-start gap-3 cursor-pointer p-1.5 rounded hover:bg-white/5 transition-colors">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={formData.is_kb_search_default}
+                                        onChange={e => setFormData({...formData, is_kb_search_default: e.target.checked})}
+                                        className="w-4 h-4 mt-0.5 rounded border-white/10 bg-black/20 text-indigo-500 focus:ring-offset-0 focus:ring-0"
+                                    />
+                                    <div className="flex flex-col">
+                                        <span className="text-sm text-white">默认知识库搜索 (KB Default)</span>
+                                        <span className="text-[10px] text-slate-500">知识库相关任务优先使用</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+                        <button 
+                            type="button" 
+                            onClick={onClose}
+                            className="px-6 py-2 hover:bg-white/5 text-slate-300 rounded-lg text-sm transition-colors"
+                        >
+                            取消
+                        </button>
+                        <button 
+                            type="submit" 
+                            disabled={loading}
+                            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:shadow-none"
+                        >
+                            {loading ? '保存中...' : '保存配置'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    )
+}
+
+function StatusBadge({ active }: { active: boolean }) {
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+            {active ? '激活 (Active)' : '禁用 (Disabled)'}
+        </span>
+    )
+}
+
+function FilterButton({ label, active }: any) {
+    return (
+        <button className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${active ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-white/5 text-slate-400 border-white/5 hover:bg-white/10'}`}>
+            {label}
+        </button>
+    )
+}
+

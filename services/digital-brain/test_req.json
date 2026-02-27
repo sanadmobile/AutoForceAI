@@ -1,0 +1,12 @@
+{
+  "topic": "Test Topic",
+  "template_id": "DeepSeek_Tech_Pro",
+  "pages": [
+    {
+      "page": 1,
+      "type": "content",
+      "title": "Test Slide",
+      "bullets": ["Bullet 1", "Bullet 2"]
+    }
+  ]
+}

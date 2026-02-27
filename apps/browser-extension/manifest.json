@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Digital Employee - 自动化助手",
+  "version": "1.0.0",
+  "description": "配合 Web Console 实现在用户浏览器本地进行自动化操作（发布、评论等），无需下载客户端。",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "*://*.xiaohongshu.com/*",
+    "*://creator.xiaohongshu.com/*",
+    "*://*.douyin.com/*",
+    "*://creator.douyin.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://localhost/*", "*://*.sdosoft.com/*"],
+      "js": ["scripts/connector.js"]
+    },
+    {
+      "matches": ["*://creator.xiaohongshu.com/*"],
+      "js": ["scripts/xiaohongshu_handler.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
